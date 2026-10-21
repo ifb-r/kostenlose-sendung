@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kostenlose Sendung an einen Debitor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --brand:       #0f6cbd;
+    --brand-dark:  #0c5a9e;
+    --brand-light: #e8f3fb;
+    --success:     #107c10;
+    --warn:        #d83b01;
+    --gray-1:      #f5f5f5;
+    --gray-2:      #e0e0e0;
+    --gray-3:      #888;
+    --text:        #1a1a1a;
+    --radius:      8px;
+    --shadow:      0 2px 8px rgba(0,0,0,.12);
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-1); color: var(--text); min-height: 100vh; }
+  header { background: var(--brand); color: #fff; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: .3px; }
+  main { max-width: 1000px; margin: 28px auto; padding: 0 16px 60px; }
+  .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--brand); border-bottom: 1px solid var(--gray-2); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .sub-title { font-size: 13px; font-weight: 600; color: var(--text); margin: 16px 0 10px; }
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  label { font-size: 12px; font-weight: 600; color: var(--gray-3); text-transform: uppercase; letter-spacing: .4px; }
+  input[type=text], input[type=number] {
+    border: 1px solid var(--gray-2); border-radius: 5px; padding: 8px 10px;
+    font-size: 14px; font-family: inherit; background: #fff; color: var(--text); transition: border-color .15s;
+  }
+  input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(15,108,189,.12); }
+  input[readonly], input:disabled { background: var(--gray-1); color: var(--gray-3); cursor: default; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: background .15s, opacity .15s; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-dark); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover:not(:disabled) { background: #0a5e0a; }
+  .btn-ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+  .btn-ghost:hover:not(:disabled) { background: var(--brand-light); }
+  .btn-small { font-size: 12px; padding: 5px 12px; }
+  .btn-danger { background: transparent; color: var(--warn); border: 1px solid var(--warn); padding: 4px 10px; font-size: 13px; }
+  .btn-danger:hover:not(:disabled) { background: #fdf0ec; }
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 16px; }
+  .action-bar .left { margin-right: auto; }
+  .search-wrapper { position: relative; }
+  .search-wrapper input { width: 100%; }
+  .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--gray-2); border-top: none; border-radius: 0 0 6px 6px; max-height: 360px; overflow-y: auto; z-index: 50; box-shadow: var(--shadow); display: none; }
+  .search-dropdown.open { display: block; }
+  .search-item { padding: 9px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--gray-1); }
+  .search-item:hover, .search-item.highlighted { background: var(--brand-light); }
+  .search-item .item-no { font-weight: 600; color: var(--brand); margin-right: 8px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--gray-3); padding: 6px 10px; border-bottom: 2px solid var(--gray-2); }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--gray-1); vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table input[type=number] { width: 80px; text-align: right; }
+  .data-table tr.clickable { cursor: pointer; }
+  .data-table tr.clickable:hover td { background: var(--brand-light); }
+  .data-table tr.selected td { background: var(--brand-light); font-weight: 600; }
+  .empty-msg { text-align: center; color: var(--gray-3); padding: 28px; font-size: 14px; }
+  .hint { font-size: 13px; color: var(--gray-3); margin-bottom: 12px; }
+  .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--gray-1); color: var(--text); white-space: nowrap; }
+  .badge.open { background: #e6f4e6; color: var(--success); }
+  .badge.inWarehouse { background: #fff4e5; color: #8a4b00; }
+  .badge.shipped { background: var(--brand-light); color: var(--brand); }
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: #222; color: #fff; padding: 12px 22px; border-radius: 6px; font-size: 14px; opacity: 0; transition: opacity .25s, transform .25s; z-index: 999; max-width: 440px; text-align: center; pointer-events: none; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { background: var(--success); }
+  #toast.error   { background: var(--warn); }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #dlgBackdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  #dlgBackdrop.open { display: flex; }
+  #dlgBox { background: #fff; border-radius: var(--radius); box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 22px 24px; max-width: 440px; width: calc(100% - 32px); }
+  #dlgText { font-size: 14px; line-height: 1.5; margin-bottom: 18px; white-space: pre-line; }
+  @media (max-width: 600px) { .form-row { flex-direction: column; } }
+</style>
+</head>
+<body>
+
+<script>
+const CONFIG = { workerBase: 'https://kostenlose-sendung-api.andrea-reichert.workers.dev' };
+</script>
+
+<header>
+  <h1>Kostenlose Sendung an einen Debitor</h1>
+</header>
+
+<main>
+
+  <!-- 1 · Debitor auswählen -->
+  <div class="card">
+    <div class="card-title">1 · Debitor auswählen</div>
+    <p class="hint">Für Ware, die ein Kunde kostenlos an seine Adresse bekommt, ohne Bezug zu einem Seminar – z. B. Ersatz für eine beschädigte Prämie. Für ein Seminar nimm die Nachsendungs-Webseite, für Ware an Kollegen die Warenentnahme.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Debitor-Nr., Name, PLZ oder Ort</label>
+        <div class="search-wrapper" id="customerSearchWrapper">
+          <input id="customerSearchInput" type="text" placeholder="Mindestens 2 Zeichen eintippen…"
+                 oninput="onCustomerSearch()" onkeydown="onCustomerKey(event)" autocomplete="off" />
+          <div id="customerDropdown" class="search-dropdown"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row" id="customerDetails" style="display:none">
+      <div class="form-group" style="flex:0 0 140px">
+        <label>Debitor-Nr.</label>
+        <input id="fldCustNo" type="text" readonly />
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Name</label>
+        <input id="fldCustName" type="text" readonly />
+      </div>
+      <div class="form-group" style="flex:3">
+        <label>Anschrift</label>
+        <input id="fldCustAddress" type="text" readonly />
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · Sendungen dieses Debitors -->
+  <div class="card" id="ordersCard" style="display:none">
+    <div class="card-title">
+      <span>2 · Kostenlose Sendungen dieses Debitors</span>
+      <span>
+        <button class="btn btn-ghost btn-small" onclick="loadOrders()">↻ Aktualisieren</button>
+        <button class="btn btn-primary btn-small" onclick="newShipment()">+ Neue Sendung</button>
+      </span>
+    </div>
+    <p class="hint">Offene Sendungen kannst du ändern, solange es keine Lagerkommissionierung gibt. Ist eine Sendung vollständig geliefert, schließt der Nachtlauf sie ab; danach steht sie hier nicht mehr.</p>
+    <div id="ordersContainer"><p class="empty-msg">Wird geladen…</p></div>
+  </div>
+
+  <!-- 3 · Sendung bearbeiten -->
+  <div class="card" id="shipmentCard" style="display:none">
+    <div class="card-title">
+      <span id="shipmentTitle">3 · Neue Sendung</span>
+      <span id="shipmentState"></span>
+    </div>
+    <p class="hint" id="shipmentInfo"></p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bearbeitet von *</label>
+        <input id="fldEditor" type="text" maxlength="100" placeholder="Dein Vor- und Nachname" oninput="refreshButtons()" />
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Grund *</label>
+        <input id="fldReason" type="text" maxlength="250" placeholder="z. B. Prämie beschädigt angekommen" oninput="refreshButtons()" />
+      </div>
+    </div>
+
+    <div class="sub-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Lieferanschrift</span>
+      <button class="btn btn-ghost btn-small" id="btnCustAddr" onclick="takeCustomerAddress()">Anschrift des Debitors übernehmen</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Name *</label><input id="shipName" type="text" maxlength="100" oninput="refreshButtons()" /></div>
+      <div class="form-group" style="flex:2"><label>Name 2</label><input id="shipName2" type="text" maxlength="50" oninput="refreshButtons()" /></div>
+      <div class="form-group" style="flex:2"><label>z. Hd. / Kontakt</label><input id="shipContact" type="text" maxlength="100" oninput="refreshButtons()" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Adresse *</label><input id="shipAddress" type="text" maxlength="100" oninput="refreshButtons()" /></div>
+      <div class="form-group" style="flex:2"><label>Adresse 2</label><input id="shipAddress2" type="text" maxlength="50" oninput="refreshButtons()" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 120px"><label>PLZ *</label><input id="shipPostCode" type="text" maxlength="20" oninput="refreshButtons()" /></div>
+      <div class="form-group" style="flex:2"><label>Ort *</label><input id="shipCity" type="text" maxlength="30" oninput="refreshButtons()" /></div>
+      <div class="form-group" style="flex:0 0 120px"><label>Land</label><input id="shipCountry" type="text" maxlength="10" placeholder="leer = DE" oninput="refreshButtons()" /></div>
+    </div>
+
+    <div class="form-row" id="addItemRow" style="align-items:flex-end;border-top:1px solid var(--gray-2);padding-top:16px">
+      <div class="form-group" style="flex:2">
+        <label>Artikel</label>
+        <div class="search-wrapper" id="itemSearchWrapper">
+          <input id="newItemInput" type="text" placeholder="Nr. oder Bezeichnung…"
+                 oninput="onNewItemSearch()" onkeydown="onNewItemKey(event)" autocomplete="off" />
+          <div id="newItemDropdown" class="search-dropdown"></div>
+        </div>
+      </div>
+      <div class="form-group" style="flex:0 0 100px">
+        <label>Menge</label>
+        <input id="newQty" type="number" min="1" step="1" value="1" onkeydown="if(event.key==='Enter')addLine()" />
+      </div>
+      <div style="padding-bottom:1px">
+        <button class="btn btn-primary" onclick="addLine()">+ Hinzufügen</button>
+      </div>
+    </div>
+
+    <div id="linesContainer"><p class="empty-msg">Noch keine Artikel erfasst.</p></div>
+
+    <div class="action-bar">
+      <button class="btn btn-danger left" id="btnCancel" onclick="cancelShipment()" style="display:none">🗑 Sendung löschen</button>
+      <button class="btn btn-ghost" id="btnDiscard" onclick="discardChanges()" disabled>↩ Änderungen verwerfen</button>
+      <button class="btn btn-success" id="btnSubmit" onclick="saveShipment()" disabled>✔ Speichern</button>
+    </div>
+
+    <div id="pickSection" style="margin-top:16px;border-top:1px solid var(--gray-2);padding-top:16px;display:none">
+      <p class="hint" id="pickInfo"></p>
+      <div class="action-bar" style="margin-top:0">
+        <button class="btn btn-primary" id="btnPick" onclick="requestPick()" style="display:none">📦 Lagerkommissionierung jetzt erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 · Bearbeitungsverlauf -->
+  <div class="card" id="historyCard" style="display:none">
+    <div class="card-title">
+      <span>4 · Bearbeitungsverlauf</span>
+      <button class="btn btn-ghost btn-small" onclick="loadHistory()">↻ Aktualisieren</button>
+    </div>
+    <div id="historyContainer"><p class="empty-msg">Wird geladen…</p></div>
+  </div>
+
+</main>
+<div id="toast"></div>
+<div id="dlgBackdrop">
+  <div id="dlgBox" role="dialog" aria-modal="true">
+    <div id="dlgText"></div>
+    <div class="action-bar" style="margin-top:0">
+      <button class="btn btn-ghost" id="dlgCancel">Abbrechen</button>
+      <button class="btn btn-primary" id="dlgOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────
+let allItems = [];
+let foundCustomers = [];
+let customerHighlight = -1;
+let customerSearchTimer = null;
+let selectedCustomer = null;
+let orders = [];
+let currentOrder = null;      // null = neue Sendung
+let editorOpen = false;
+let filteredNewItems = [];
+let selectedNewItem = null;
+let newItemHighlight = -1;
+// { salesLineNo, no, description, unit, origQty, quantity, locked, lockReason, deleted, pickState, stock, location, shipped }
+let lines = [];
+let origShipTo = {};
+let origReason = '';
+
+const SHIP_FIELDS = { name: 'shipName', name2: 'shipName2', contact: 'shipContact', address: 'shipAddress', address2: 'shipAddress2',
+                      postCode: 'shipPostCode', city: 'shipCity', countryRegionCode: 'shipCountry' };
+const STATE_TEXT = { open: 'offen', inWarehouse: 'im Lager', shipped: 'geliefert' };
+const LOCK_TEXT = { pick: 'Lagerkommissionierung vorhanden', shipped: 'bereits geliefert' };
+
+// ── Worker helpers ─────────────────────────────────────────────────────
+async function wGet(path) {
+  const r = await fetch(`${CONFIG.workerBase}${path}`);
+  if (!r.ok) throw new Error(await errorText(r));
+  return r.json();
+}
+async function wPost(path, body) {
+  const r = await fetch(`${CONFIG.workerBase}${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(await errorText(r));
+  return r.json();
+}
+async function errorText(r) {
+  try { return (await r.json()).error || `Fehler ${r.status}`; } catch { return `Fehler ${r.status}`; }
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────
+(async () => {
+  document.getElementById('fldEditor').value = localStorage.getItem('kostenloseSendungEditor') || '';
+  try {
+    allItems = (await wGet('/items')).value || [];
+  } catch (e) {
+    showToast('Artikel konnten nicht geladen werden: ' + e.message, 'error');
+  }
+})();
+
+// ── Debitorensuche ─────────────────────────────────────────────────────
+function onCustomerSearch() {
+  clearTimeout(customerSearchTimer);
+  const q = document.getElementById('customerSearchInput').value.trim();
+  const dd = document.getElementById('customerDropdown');
+  if (q.length < 2) { dd.classList.remove('open'); return; }
+  customerSearchTimer = setTimeout(async () => {
+    dd.innerHTML = '<div class="search-item" style="color:var(--gray-3)">Wird gesucht…</div>';
+    dd.classList.add('open');
+    try {
+      foundCustomers = (await wGet(`/customers?search=${encodeURIComponent(q)}`)).value || [];
+    } catch (e) {
+      dd.innerHTML = `<div class="search-item" style="color:var(--warn)">${esc(e.message)}</div>`;
+      return;
+    }
+    customerHighlight = -1;
+    dd.innerHTML = foundCustomers.length
+      ? foundCustomers.map((c, i) =>
+          `<div class="search-item" data-idx="${i}" onmousedown="selectCustomer(${i})">
+             <span class="item-no">${esc(c.no)}</span>${esc(c.name)}
+             <span style="float:right;color:var(--gray-3);font-size:12px">${esc(c.postCode)} ${esc(c.city)}</span>
+           </div>`).join('')
+      : '<div class="search-item" style="color:var(--gray-3)">Keine Debitoren gefunden</div>';
+  }, 300);
+}
+
+function onCustomerKey(e) {
+  const items = document.querySelectorAll('#customerDropdown .search-item[data-idx]');
+  if (e.key === 'ArrowDown') { e.preventDefault(); customerHighlight = Math.min(customerHighlight + 1, items.length - 1); refreshHighlight(items, customerHighlight); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); customerHighlight = Math.max(customerHighlight - 1, 0); refreshHighlight(items, customerHighlight); }
+  else if (e.key === 'Enter' && customerHighlight >= 0) selectCustomer(customerHighlight);
+  else if (e.key === 'Escape') document.getElementById('customerDropdown').classList.remove('open');
+}
+
+function refreshHighlight(items, idx) {
+  items.forEach((el, i) => el.classList.toggle('highlighted', i === idx));
+  if (idx >= 0) items[idx].scrollIntoView({ block: 'nearest' });
+}
+
+async function selectCustomer(idx) {
+  document.getElementById('customerDropdown').classList.remove('open');
+  if (hasChanges() && !(await askConfirm('Es gibt nicht gespeicherte Änderungen. Trotzdem einen anderen Debitor wählen?', 'Debitor wechseln'))) {
+    document.getElementById('customerSearchInput').value = selectedCustomer ? `${selectedCustomer.no} · ${selectedCustomer.name}` : '';
+    return;
+  }
+  selectedCustomer = foundCustomers[idx];
+  document.getElementById('customerSearchInput').value = `${selectedCustomer.no} · ${selectedCustomer.name}`;
+  document.getElementById('fldCustNo').value = selectedCustomer.no;
+  document.getElementById('fldCustName').value = [selectedCustomer.name, selectedCustomer.name2].filter(Boolean).join(', ');
+  document.getElementById('fldCustAddress').value = [selectedCustomer.address, `${selectedCustomer.postCode} ${selectedCustomer.city}`.trim(), selectedCustomer.countryRegionCode].filter(Boolean).join(', ');
+  document.getElementById('customerDetails').style.display = '';
+  document.getElementById('ordersCard').style.display = '';
+  closeEditor();
+  await loadOrders();
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('customerSearchWrapper').contains(e.target))
+    document.getElementById('customerDropdown').classList.remove('open');
+  if (!document.getElementById('itemSearchWrapper').contains(e.target))
+    document.getElementById('newItemDropdown').classList.remove('open');
+});
+
+// ── Sendungen des Debitors ─────────────────────────────────────────────
+async function loadOrders() {
+  if (!selectedCustomer) return;
+  const container = document.getElementById('ordersContainer');
+  container.innerHTML = '<p class="empty-msg">Wird geladen…</p>';
+  try {
+    orders = ((await wGet(`/customers/${encodeURIComponent(selectedCustomer.no)}/orders`)).value || [])
+      .sort((a, b) => (b.no || '').localeCompare(a.no || ''));
+  } catch (e) {
+    container.innerHTML = `<p class="empty-msg" style="color:var(--warn)">Sendungen konnten nicht geladen werden: ${esc(e.message)}</p>`;
+    return;
+  }
+  renderOrders();
+}
+
+function renderOrders() {
+  const container = document.getElementById('ordersContainer');
+  if (!orders.length) {
+    container.innerHTML = '<p class="empty-msg">Für diesen Debitor gibt es keine offenen kostenlosen Sendungen. Lege mit „+ Neue Sendung“ eine an.</p>';
+    return;
+  }
+  container.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Auftrag</th><th>Datum</th><th>Grund</th><th>Lieferung an</th><th>Artikel</th><th>Status</th></tr></thead>
+      <tbody>
+        ${orders.map((o, i) => `
+          <tr class="clickable ${currentOrder && currentOrder.no === o.no ? 'selected' : ''}" onclick="openOrder(${i})">
+            <td><strong>${esc(o.no)}</strong></td>
+            <td>${fmtDate(o.orderDate)}</td>
+            <td>${esc(o.reason)}</td>
+            <td>${esc(o.shipToName)}, ${esc(o.shipToCity)}</td>
+            <td>${(o.freeShipmentOrderLines || []).length}</td>
+            <td><span class="badge ${esc(o.state)}">${esc(STATE_TEXT[o.state] || o.state)}</span></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function openOrder(idx) {
+  if (hasChanges() && !(await askConfirm('Es gibt nicht gespeicherte Änderungen. Trotzdem eine andere Sendung öffnen?', 'Wechseln'))) return;
+  applyOrder(orders[idx]);
+  loadHistory();
+}
+
+async function newShipment() {
+  if (hasChanges() && !(await askConfirm('Es gibt nicht gespeicherte Änderungen. Trotzdem eine neue Sendung anlegen?', 'Neue Sendung'))) return;
+  applyOrder(null);
+  takeCustomerAddress();
+  document.getElementById('fldReason').focus();
+}
+
+function closeEditor() {
+  editorOpen = false;
+  currentOrder = null;
+  lines = [];
+  document.getElementById('shipmentCard').style.display = 'none';
+  document.getElementById('historyCard').style.display = 'none';
+}
+
+// ── Sendung anzeigen ───────────────────────────────────────────────────
+function applyOrder(order) {
+  editorOpen = true;
+  currentOrder = order;
+  origReason = order ? (order.reason || '') : '';
+  origShipTo = order ? {
+    name: order.shipToName || '', name2: order.shipToName2 || '', contact: order.shipToContact || '',
+    address: order.shipToAddress || '', address2: order.shipToAddress2 || '', postCode: order.shipToPostCode || '',
+    city: order.shipToCity || '', countryRegionCode: order.shipToCountryRegionCode || '',
+  } : {};
+  for (const [k, id] of Object.entries(SHIP_FIELDS)) document.getElementById(id).value = origShipTo[k] || '';
+  document.getElementById('fldReason').value = origReason;
+  lines = (order?.freeShipmentOrderLines || []).map(l => ({
+    salesLineNo: l.lineNo, no: l.itemNo, description: l.description || '', unit: l.unitOfMeasureCode || '',
+    origQty: l.quantity, quantity: l.quantity, locked: !!l.locked, lockReason: l.lockReason || '', deleted: false,
+    pickState: l.pickState || '', stock: l.stockAtLocation || 0, location: l.locationCode || '', shipped: l.quantityShipped || 0,
+  }));
+
+  const locked = isLocked();
+  document.getElementById('shipmentTitle').textContent = order ? `3 · Sendung ${order.no}` : '3 · Neue Sendung';
+  document.getElementById('shipmentState').innerHTML = order
+    ? `<span class="badge ${esc(order.state)}">${esc(STATE_TEXT[order.state] || order.state)}</span>` : '';
+  document.getElementById('shipmentInfo').textContent = !order
+    ? 'Beim Speichern legt Business Central einen Verkaufsauftrag zu 0 € an und gibt ihn frei. Die Ware geht an die Lieferanschrift unten.'
+    : locked
+      ? (order.state === 'shipped'
+          ? 'Die Sendung ist (teilweise) geliefert und kann nicht mehr geändert werden. Ist alles geliefert, schließt der Nachtlauf sie ab.'
+          : 'Für die Sendung gibt es eine Lagerkommissionierung. Sie kann hier nicht mehr geändert werden; wende dich für Änderungen an das Lager.')
+      : `Zuletzt bearbeitet von ${order.lastWebEditor || '–'} am ${fmtDateTime(order.lastWebEditAt)}. Änderungen sind möglich, solange es keine Lagerkommissionierung gibt.`;
+
+  for (const id of Object.values(SHIP_FIELDS)) document.getElementById(id).disabled = locked;
+  document.getElementById('fldReason').disabled = locked;
+  document.getElementById('btnCustAddr').style.display = locked ? 'none' : '';
+  document.getElementById('addItemRow').style.display = locked ? 'none' : '';
+  document.getElementById('btnCancel').style.display = order && !locked ? '' : 'none';
+  document.getElementById('shipmentCard').style.display = '';
+  document.getElementById('historyCard').style.display = order ? '' : 'none';
+  renderPickInfo();
+  renderLines();
+  renderOrders();
+}
+
+function isLocked() { return !!currentOrder && currentOrder.state !== 'open'; }
+
+function takeCustomerAddress() {
+  if (!selectedCustomer) return;
+  const c = selectedCustomer;
+  const v = { name: c.name, name2: c.name2, contact: c.contact, address: c.address, address2: c.address2,
+              postCode: c.postCode, city: c.city, countryRegionCode: c.countryRegionCode };
+  for (const [k, id] of Object.entries(SHIP_FIELDS)) document.getElementById(id).value = v[k] || '';
+  refreshButtons();
+}
+
+function readShipTo() {
+  const s = {};
+  for (const [k, id] of Object.entries(SHIP_FIELDS)) s[k] = document.getElementById(id).value.trim();
+  return s;
+}
+
+function shipToChanged() {
+  const s = readShipTo();
+  return Object.keys(SHIP_FIELDS).some(k => (s[k] || '') !== (origShipTo[k] || ''));
+}
+
+// ── Lagerkommissionierung ──────────────────────────────────────────────
+function renderPickInfo() {
+  const section = document.getElementById('pickSection');
+  const info = document.getElementById('pickInfo');
+  const btn = document.getElementById('btnPick');
+  if (!currentOrder) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const noStock = lines.filter(l => l.pickState === 'noStock' || l.pickState === 'partialStock').length;
+  let text;
+  if (currentOrder.openPickNos)
+    text = `Lagerkommissionierung: ${currentOrder.openPickNos}. Das Lager kommissioniert und verschickt die Sendung.`;
+  else if (currentOrder.pickAllowed)
+    text = 'Noch keine Lagerkommissionierung. Der Nachtlauf erstellt sie, oder du stößt sie jetzt an. Danach kann die Sendung nicht mehr geändert werden.';
+  else if (currentOrder.pendingPickLines)
+    text = 'Noch keine Lagerkommissionierung, weil am Lagerort freier Bestand fehlt.';
+  else
+    text = 'Alle Artikel sind kommissioniert bzw. geliefert.';
+  if (noStock)
+    text += ` Achtung: Für ${noStock} Artikel fehlt freier Bestand am Lagerort. Der Nachtlauf übernimmt sie, sobald genug Bestand frei ist. Bitte kläre das mit dem Lager.`;
+  info.textContent = text;
+  btn.style.display = currentOrder.pickAllowed ? '' : 'none';
+}
+
+async function requestPick() {
+  if (hasChanges()) { showToast('Bitte speichere oder verwirf zuerst deine Änderungen.', 'error'); return; }
+  if (!(await askConfirm('Für die Sendung wird jetzt eine Lagerkommissionierung erstellt. Danach kann sie hier nicht mehr geändert werden. Fortfahren?', 'Erstellen'))) return;
+  const btn = document.getElementById('btnPick');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Wird ausgeführt…';
+  try {
+    const data = await wPost(`/orders/${encodeURIComponent(currentOrder.no)}/pick`, {});
+    await refreshAfterSave(data.order);
+    const missing = lines.filter(l => l.pickState === 'noStock' || l.pickState === 'partialStock')
+      .map(l => `${l.no} (frei ${l.location}: ${l.stock})`);
+    if (missing.length)
+      showToast(`Lagerkommissionierung ${data.order?.openPickNos || ''}: Wegen fehlendem freien Bestand nicht übernommen: ${missing.join(', ')}. Bitte wende dich an das Lager.`, 'error');
+    else
+      showToast(`✓ Lagerkommissionierung ${data.order?.openPickNos || ''} erstellt.`, 'success');
+  } catch (e) {
+    showToast('Fehler: ' + e.message, 'error');
+  } finally {
+    btn.innerHTML = origHtml;
+    btn.disabled = false;
+  }
+}
+
+// ── Artikelsuche ───────────────────────────────────────────────────────
+function onNewItemSearch() {
+  const q = document.getElementById('newItemInput').value.trim().toLowerCase();
+  const dd = document.getElementById('newItemDropdown');
+  selectedNewItem = null;
+  newItemHighlight = -1;
+  if (q.length < 1) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
+  filteredNewItems = allItems.filter(i =>
+    i.no.toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q)
+  ).slice(0, 40);
+  dd.innerHTML = filteredNewItems.length
+    ? filteredNewItems.map((i, idx) =>
+        `<div class="search-item" data-idx="${idx}" onmousedown="selectNewItem(${idx})">
+           <span class="item-no">${esc(i.no)}</span>${esc(i.description)}
+           <span style="color:var(--gray-3);font-size:12px;margin-left:6px">${esc(i.unitOfMeasureCode)}</span>
+         </div>`).join('')
+    : '<div class="search-item" style="color:var(--gray-3)">Keine Artikel gefunden</div>';
+  dd.classList.add('open');
+}
+
+function onNewItemKey(e) {
+  const items = document.querySelectorAll('#newItemDropdown .search-item[data-idx]');
+  if (e.key === 'ArrowDown') { e.preventDefault(); newItemHighlight = Math.min(newItemHighlight + 1, items.length - 1); refreshHighlight(items, newItemHighlight); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); newItemHighlight = Math.max(newItemHighlight - 1, 0); refreshHighlight(items, newItemHighlight); }
+  else if (e.key === 'Enter' && newItemHighlight >= 0) selectNewItem(newItemHighlight);
+  else if (e.key === 'Escape') document.getElementById('newItemDropdown').classList.remove('open');
+}
+
+function selectNewItem(idx) {
+  selectedNewItem = filteredNewItems[idx];
+  document.getElementById('newItemInput').value = `${selectedNewItem.no} · ${selectedNewItem.description || ''}`;
+  document.getElementById('newItemDropdown').classList.remove('open');
+  document.getElementById('newQty').select();
+}
+
+// ── Zeilen bearbeiten ──────────────────────────────────────────────────
+function addLine() {
+  if (!selectedNewItem) { showToast('Bitte zuerst einen Artikel auswählen.', 'error'); return; }
+  const qty = parseInt(document.getElementById('newQty').value, 10);
+  if (!(qty > 0)) { showToast('Bitte eine Menge größer 0 eingeben.', 'error'); return; }
+  const existing = lines.find(l => l.no === selectedNewItem.no && !l.locked && !l.deleted);
+  if (existing) existing.quantity += qty;
+  else lines.push({ salesLineNo: 0, no: selectedNewItem.no, description: selectedNewItem.description || '',
+                    unit: selectedNewItem.unitOfMeasureCode || '', origQty: 0, quantity: qty, locked: false, lockReason: '', deleted: false });
+  selectedNewItem = null;
+  document.getElementById('newItemInput').value = '';
+  document.getElementById('newQty').value = '1';
+  document.getElementById('newItemInput').focus();
+  renderLines();
+}
+
+function updateQty(idx, value) {
+  const qty = parseInt(value, 10);
+  if (qty > 0) lines[idx].quantity = qty;
+  renderLines();
+}
+
+function toggleDelete(idx) {
+  const l = lines[idx];
+  if (l.salesLineNo === 0) lines.splice(idx, 1);
+  else l.deleted = !l.deleted;
+  renderLines();
+}
+
+function getChanges() {
+  const changes = [];
+  for (const l of lines) {
+    if (l.locked) continue;
+    if (l.salesLineNo === 0) changes.push({ action: 'insert', itemNo: l.no, quantity: l.quantity });
+    else if (l.deleted) changes.push({ action: 'delete', salesLineNo: l.salesLineNo, originalQuantity: l.origQty });
+    else if (l.quantity !== l.origQty) changes.push({ action: 'modify', salesLineNo: l.salesLineNo, originalQuantity: l.origQty, quantity: l.quantity });
+  }
+  return changes;
+}
+
+function hasChanges() {
+  if (!editorOpen || isLocked()) return false;
+  if (!currentOrder) return lines.length > 0;
+  return getChanges().length > 0 || shipToChanged() || document.getElementById('fldReason').value.trim() !== origReason;
+}
+
+function refreshButtons() {
+  const dirty = hasChanges();
+  document.getElementById('btnSubmit').disabled = !dirty;
+  document.getElementById('btnDiscard').disabled = !dirty;
+  document.getElementById('btnPick').disabled = dirty;
+}
+
+async function discardChanges() {
+  if (!(await askConfirm('Alle nicht gespeicherten Änderungen verwerfen?', 'Verwerfen'))) return;
+  if (currentOrder) applyOrder(currentOrder);
+  else closeEditor();
+}
+
+function renderLines() {
+  const container = document.getElementById('linesContainer');
+  refreshButtons();
+  if (!lines.length) {
+    container.innerHTML = '<p class="empty-msg">Noch keine Artikel erfasst.</p>';
+    return;
+  }
+  container.innerHTML = `
+    <table class="data-table" style="margin-top:12px">
+      <thead><tr><th>Artikel-Nr.</th><th>Bezeichnung</th><th>Einheit</th><th>Menge</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        ${lines.map((l, i) => {
+          let status = 'gespeichert';
+          if (l.pickState === 'noStock')
+            status = `<span style="color:var(--warn)">⚠ kein freier Bestand am Lagerort ${esc(l.location)} – nicht auf Lagerkomm.</span>`;
+          else if (l.pickState === 'partialStock')
+            status = `<span style="color:var(--warn)">⚠ nur ${esc(l.stock)} frei am Lagerort ${esc(l.location)} – nicht auf Lagerkomm.</span>`;
+          else if (l.pickState === 'pending')
+            status = 'gespeichert, noch nicht auf Lagerkomm.';
+          if (l.locked) status = `🔒 ${esc(LOCK_TEXT[l.lockReason] || 'gesperrt')}${l.shipped ? ` (${esc(l.shipped)} geliefert)` : ''}`;
+          else if (l.salesLineNo === 0) status = '<span style="color:var(--success)">neu</span>';
+          else if (l.deleted) status = '<span style="color:var(--warn)">wird gelöscht</span>';
+          else if (l.quantity !== l.origQty) status = `<span style="color:var(--brand)">geändert (vorher ${l.origQty})</span>`;
+          const editable = !l.locked && !l.deleted && !isLocked();
+          const qtyCell = editable ? `<input type="number" min="1" step="1" value="${l.quantity}" onchange="updateQty(${i}, this.value)" />` : esc(l.quantity);
+          const btn = l.locked || isLocked() ? '' : `<button class="btn btn-danger" onclick="toggleDelete(${i})">${l.deleted ? '↩' : '✕'}</button>`;
+          return `
+          <tr style="${l.deleted ? 'text-decoration:line-through;color:var(--gray-3)' : ''}">
+            <td><strong>${esc(l.no)}</strong></td>
+            <td>${esc(l.description)}</td>
+            <td>${esc(l.unit)}</td>
+            <td>${qtyCell}</td>
+            <td style="font-size:13px">${status}</td>
+            <td>${btn}</td>
+          </tr>`; }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── Speichern ──────────────────────────────────────────────────────────
+function checkInput() {
+  const editor = document.getElementById('fldEditor').value.trim();
+  if (!editor) { showToast('Bitte gib deinen Namen bei „Bearbeitet von“ ein.', 'error'); document.getElementById('fldEditor').focus(); return null; }
+  const reason = document.getElementById('fldReason').value.trim();
+  if (!reason) { showToast('Bitte gib den Grund für die kostenlose Sendung ein.', 'error'); document.getElementById('fldReason').focus(); return null; }
+  const s = readShipTo();
+  if (!s.name || !s.address || !s.postCode || !s.city) { showToast('Bitte gib die Lieferanschrift vollständig ein (Name, Adresse, PLZ, Ort).', 'error'); return null; }
+  localStorage.setItem('kostenloseSendungEditor', editor);
+  return { editor, reason, shipTo: s };
+}
+
+async function saveShipment() {
+  if (!hasChanges()) return;
+  if (!currentOrder && !lines.length) { showToast('Bitte mindestens einen Artikel hinzufügen.', 'error'); return; }
+  const input = checkInput();
+  if (!input) return;
+  await send({ ...input, changes: getChanges() }, '✓ Sendung gespeichert.');
+}
+
+async function cancelShipment() {
+  if (!currentOrder) return;
+  const editor = document.getElementById('fldEditor').value.trim();
+  if (!editor) { showToast('Bitte gib deinen Namen bei „Bearbeitet von“ ein.', 'error'); document.getElementById('fldEditor').focus(); return; }
+  if (!(await askConfirm(`Die Sendung ${currentOrder.no} wird mit allen Artikeln gelöscht. Fortfahren?`, 'Löschen'))) return;
+  await send({ editor, reason: document.getElementById('fldReason').value.trim(), shipTo: readShipTo(), cancel: true, changes: [] }, `✓ Sendung ${currentOrder.no} gelöscht.`);
+}
+
+async function send(payload, successMsg) {
+  const btn = document.getElementById('btnSubmit');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Wird gespeichert…';
+  try {
+    const data = await wPost('/shipments', {
+      customerNo: selectedCustomer.no,
+      salesOrderNo: currentOrder?.no || '',
+      ...payload,
+    });
+    await refreshAfterSave(data.order);
+    showToast(successMsg, 'success');
+  } catch (e) {
+    showToast('Fehler: ' + e.message, 'error');
+  } finally {
+    btn.innerHTML = origHtml;
+    refreshButtons();
+  }
+}
+
+async function refreshAfterSave(order) {
+  await loadOrders();
+  if (order) {
+    applyOrder(order);
+    loadHistory();
+  } else {
+    closeEditor();
+    renderOrders();
+  }
+}
+
+// ── Bearbeitungsverlauf ────────────────────────────────────────────────
+const ACTION_TEXT = { Insert: 'neu', Modify: 'geändert', Delete: 'gelöscht' };
+
+async function loadHistory() {
+  if (!currentOrder) return;
+  const container = document.getElementById('historyContainer');
+  container.innerHTML = '<p class="empty-msg">Wird geladen…</p>';
+  try {
+    const rows = ((await wGet(`/orders/${encodeURIComponent(currentOrder.no)}/history`)).value || [])
+      .sort((a, b) => (b.transferredAt || '').localeCompare(a.transferredAt || ''));
+    if (!rows.length) { container.innerHTML = '<p class="empty-msg">Noch keine Bearbeitungen.</p>'; return; }
+    container.innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Gespeichert am</th><th>Bearbeitet von</th><th>Grund</th><th>Änderungen</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${fmtDateTime(r.transferredAt)}</td>
+              <td>${esc(r.requestedBy)}</td>
+              <td>${esc(r.reason)}</td>
+              <td>${r.cancelOrder ? '<span style="color:var(--warn)">Sendung gelöscht</span>' : ((r.freeShipmentLines || []).map(l => {
+                const what = ACTION_TEXT[l.action] || esc(l.action);
+                const qty = l.action === 'Modify' ? `${esc(l.originalQuantity)} → ${esc(l.quantity)}`
+                          : l.action === 'Delete' ? esc(l.originalQuantity) : esc(l.quantity);
+                return `${what}: ${qty} × ${esc(l.itemNo)} ${esc(l.description)}`;
+              }).join('<br>') || 'Lieferanschrift oder Grund geändert')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="empty-msg" style="color:var(--warn)">Verlauf konnte nicht geladen werden: ${esc(e.message)}</p>`;
+  }
+}
+
+window.addEventListener('beforeunload', e => { if (hasChanges()) { e.preventDefault(); e.returnValue = ''; } });
+
+// ── Hilfsfunktionen ────────────────────────────────────────────────────
+// Eigener Dialog statt confirm(): der Browser setzt dort „Auf … wird Folgendes angezeigt“ davor.
+function askConfirm(text, okLabel = 'OK') {
+  return new Promise(resolve => {
+    const backdrop = document.getElementById('dlgBackdrop');
+    const ok = document.getElementById('dlgOk');
+    const cancel = document.getElementById('dlgCancel');
+    document.getElementById('dlgText').textContent = text;
+    ok.textContent = okLabel;
+    const close = result => {
+      backdrop.classList.remove('open');
+      ok.onclick = cancel.onclick = backdrop.onclick = document.onkeydown = null;
+      resolve(result);
+    };
+    ok.onclick = () => close(true);
+    cancel.onclick = () => close(false);
+    backdrop.onclick = e => { if (e.target === backdrop) close(false); };
+    document.onkeydown = e => { if (e.key === 'Escape') close(false); };
+    backdrop.classList.add('open');
+    ok.focus();
+  });
+}
+
+function fmtDate(iso) {
+  if (!iso || iso.startsWith('0001')) return '';
+  const [y, m, d] = iso.substring(0, 10).split('-');
+  return `${d}.${m}.${y}`;
+}
+function fmtDateTime(iso) {
+  if (!iso || iso.startsWith('0001')) return '';
+  return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, type === 'error' ? 9000 : 4500);
+}
+
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
